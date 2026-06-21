@@ -1,0 +1,1413 @@
+public without sharing class CollectionController {
+
+    public class BookingWrapper {
+        @AuraEnabled public Id      Id;
+        @AuraEnabled public String  BookingName;
+        @AuraEnabled public Id      BookingId;
+        @AuraEnabled public Id      ProjectId;
+        @AuraEnabled public String  ProjectName;
+        @AuraEnabled public Id      ApplicantId;
+        @AuraEnabled public String  ApplicantName;
+        @AuraEnabled public String  CustomerReferenceId;
+        @AuraEnabled public Id      UnitId;
+        @AuraEnabled public String  UnitName;
+        @AuraEnabled public Boolean hasUnits;
+        @AuraEnabled public Boolean hasDemands;
+        @AuraEnabled public String  DunningLevel;
+        @AuraEnabled public Date    BBADuningDate;
+        @AuraEnabled public Decimal CXSatisfactionRating;
+        @AuraEnabled public Decimal BillingReceivedPercentAgainstTSV;
+        @AuraEnabled public Decimal InvoiceAmountPendingTotal;
+        @AuraEnabled public Integer DueDays;
+        @AuraEnabled public Decimal TotalAmountReceived;
+        @AuraEnabled public Decimal TotalSalesValue;
+        @AuraEnabled public Date    PTPDate;
+        @AuraEnabled public Decimal PTPAmount;
+        @AuraEnabled public Decimal MilestoneDemandPercent;
+        @AuraEnabled public String  Remarks;
+        @AuraEnabled public String  LongCallDisposition;
+        @AuraEnabled public String  CollectibleNonCollectible;
+        @AuraEnabled public String  SubCategory;
+        @AuraEnabled public Decimal BalanceInterest;
+        @AuraEnabled public Decimal InterestAccrued;
+        @AuraEnabled public Decimal InterestCollected;
+        @AuraEnabled public Decimal InterestWaived;
+        @AuraEnabled public String  InterestSlabs;
+        @AuraEnabled public String ActivityRequiredForCollection;
+
+    }
+
+    public class LastCallDispositionHistoryWrapper {
+        @AuraEnabled public String   oldValue;
+        @AuraEnabled public String   newValue;
+        @AuraEnabled public String   changedBy;
+        @AuraEnabled public Datetime changedDate;
+    }
+
+    public class DemandWrapper {
+        @AuraEnabled public Id      Id;
+        @AuraEnabled public String  DemandName;
+        @AuraEnabled public String  DemandReferenceNumber;
+        @AuraEnabled public String  MilestoneName;
+        @AuraEnabled public String  DemandSAPCode;
+        @AuraEnabled public String  ChargeCode;
+        @AuraEnabled public Date    BillingDueDate;
+        @AuraEnabled public Decimal BillingAmtBasic;
+        @AuraEnabled public Decimal TDSTax;
+        @AuraEnabled public Decimal TotalBilledLessTDS;
+        @AuraEnabled public Decimal amountAfterTDS;
+    }
+
+    public class UnitWrapper {
+        @AuraEnabled public Id     Id;
+        @AuraEnabled public String UnitName;
+        @AuraEnabled public String UnitNo;
+    }
+
+    public class FieldSetFieldInfo {
+        @AuraEnabled public String apiName;
+        @AuraEnabled public String label;
+        @AuraEnabled public String fieldType;
+    }
+
+    public class PaymentMilestoneWrapper {
+        @AuraEnabled public Id      Id;
+        @AuraEnabled public String  MilestoneName;
+        @AuraEnabled public String  BilledUnbilled;
+        @AuraEnabled public Date    ProjectedDateOfPayment;
+        @AuraEnabled public String  TdsApplicable;
+        @AuraEnabled public Decimal TdsAmount;
+        @AuraEnabled public String  DiscountApplied;
+        @AuraEnabled public Decimal DiscountAmount;
+        @AuraEnabled public String  DemandName;
+        @AuraEnabled public String  DemandReferenceNumber;
+        @AuraEnabled public String  DemandSAPCode;
+        @AuraEnabled public String  ChargeCode;
+        @AuraEnabled public Date    BillingDueDate;
+        @AuraEnabled public Decimal BillingAmtBasic;
+        @AuraEnabled public Decimal TDSTax;
+        @AuraEnabled public Decimal TotalBilledLessTDS;
+        @AuraEnabled public Id      DemandId;
+        @AuraEnabled public String  CaseStatus;
+        @AuraEnabled public Decimal PartialPaymentAmount;
+        @AuraEnabled public String  CaseNumber;
+        @AuraEnabled public Id      CaseId;
+        @AuraEnabled public Decimal ApprovedAmount;
+       
+        
+    }
+
+    public class CollectibleHistoryWrapper {
+        @AuraEnabled public String   oldValue    { get; set; }
+        @AuraEnabled public String   newValue    { get; set; }
+        @AuraEnabled public String   changedBy   { get; set; }
+        @AuraEnabled public DateTime changedDate { get; set; }
+    }
+
+    public class MilestoneUpdateInput {
+        @AuraEnabled public Id      milestoneId;
+        @AuraEnabled public String  billedUnbilled;
+        @AuraEnabled public String  projectedDateOfPayment;
+        @AuraEnabled public String  tdsApplicable;
+        @AuraEnabled public Decimal tdsAmount;
+        @AuraEnabled public String  discountApplied;
+        @AuraEnabled public Decimal discountAmount;
+        @AuraEnabled public Decimal partialPaymentAmount;
+        @AuraEnabled public Decimal amountAfterTDS;
+
+    }
+
+    public class SaveResult {
+        @AuraEnabled public Boolean success;
+        @AuraEnabled public String  message;
+        public SaveResult(Boolean success, String message) {
+            this.success = success;
+            this.message = message;
+        }
+    }
+
+    public class TPRCaseResult {
+        @AuraEnabled public Id     caseId;
+        @AuraEnabled public String caseNumber;
+        public TPRCaseResult(Id caseId, String caseNumber) {
+            this.caseId     = caseId;
+            this.caseNumber = caseNumber;
+        }
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<FieldSetFieldInfo> getDemandFieldSetFields() {
+        List<FieldSetFieldInfo> fields = new List<FieldSetFieldInfo>();
+        Schema.FieldSet fs = Schema.SObjectType.builderopedia__Demand__c
+                                .fieldSets.getMap()
+                                .get('Collection_Demand_set');
+        if (fs == null) return fields;
+        for (Schema.FieldSetMember fsm : fs.getFields()) {
+            FieldSetFieldInfo info = new FieldSetFieldInfo();
+            info.apiName   = fsm.getFieldPath();
+            info.label     = fsm.getLabel();
+            info.fieldType = String.valueOf(fsm.getType());
+            fields.add(info);
+        }
+        return fields;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<BookingWrapper> getBookings(
+        String viewName,
+        String searchTerm,
+        Long   timeStamp
+    ) {
+        Id currentUserId = UserInfo.getUserId();
+
+        String query =
+            'SELECT Id, Name, ' +
+            'builderopedia__Project__c, ' +
+            'builderopedia__Project__r.Name, ' +
+            'Applicant_Name__c, ' +
+            'Customer_SAP_Code__c, ' +
+            'builderopedia__Bill_To_Applicant__c, ' +
+            'builderopedia__Bill_To_Applicant__r.Name, ' +
+            'Unit__c, ' +
+            'Unit__r.Name, ' +
+            'Total_Outstanding_Value__c, ' +
+            'Legal__c, ' +
+            'PS_Dunning_Level__c, ' +
+            'BBA_Dunning_R_1__c, ' +
+            'Customer_Feedback__c, ' +
+            'PS_Total_Paid_Percent__c, ' +
+            'Booking_Category__c, ' +
+            'Collections_RM__c, ' +
+            'Collections_RM__r.Name, ' +
+            'Collections_RM__r.ManagerId, ' +
+            'Collections_RM__r.Manager.Name, ' +
+            'Balance_Interest__c, ' +
+            'Interest_Accured__c, ' +
+            'Interest_Collected__c, ' +
+            'Interest_Waived__c, ' +
+            'PS_Interest_Slabs__c, ' +
+            'builderopedia__Total_Amount_Received__c, ' +
+            'Total_Sales_Values__c ' +
+            'FROM builderopedia__Booking__c';
+
+        List<String> conditions = new List<String>();
+
+        if (viewName == 'ALL_OPEN') {
+            conditions.add('builderopedia__Status__c != \'Cancelled\'');
+        } else if (viewName == 'ALL_CLOSED') {
+            conditions.add('builderopedia__Status__c = \'Cancelled\'');
+        } else if (viewName == 'TODAYS') {
+            conditions.add('CreatedDate = TODAY');
+        } else if (viewName == 'MYTEAMS') {
+            conditions.add('OwnerId = :currentUserId');
+        }
+
+        if (String.isNotBlank(searchTerm)) {
+            String searchKey = '%' + searchTerm + '%';
+            conditions.add(
+                '(Name LIKE :searchKey OR ' +
+                'builderopedia__Project__r.Name LIKE :searchKey OR ' +
+                'Applicant_Name__c LIKE :searchKey)'
+            );
+        }
+
+
+        //  conditions.add(
+        //      'Collections_RM__r.Manager.Name = \'Bhumika Paul\''
+        //  );
+
+
+
+       conditions.add(                               //original conditions 
+       '(Collections_RM__c = :currentUserId ' +
+       'OR Collections_RM__r.ManagerId = :currentUserId)'
+       );
+
+//       conditions.add(
+//     'Collections_RM__r.ManagerId = \'005GC00000IUgLTYA0\''
+// );
+
+        conditions.add('Total_Outstanding_Value__c >= 50000');
+       conditions.add('(Legal__c = false OR Legal__c = null)');
+        conditions.add('(Booking_Category__c = \'Normal\' OR Booking_Category__c = null)');
+        conditions.add('CD_Date__c = null');
+
+        
+
+        if (!conditions.isEmpty()) {
+            query += ' WHERE ' + String.join(conditions, ' AND ');
+        }
+
+        if (viewName == 'RECENTLY_VIEWED') {
+            query += ' ORDER BY LastViewedDate DESC NULLS LAST LIMIT 10';
+        } else {
+            query += ' ORDER BY Name ASC';
+        }
+
+        List<builderopedia__Booking__c> bookingList = Database.query(query);
+
+        Set<Id> bookingIds = new Set<Id>();
+        for (builderopedia__Booking__c b : bookingList) {
+            bookingIds.add(b.Id);
+        }
+
+        Map<Id, Collection__c> collectionMap = new Map<Id, Collection__c>();
+        for (Collection__c c : [
+            SELECT Id,
+                   Booking__c,
+                   PTP_Date__c,
+                   PTP_Amount__c,
+                   Remarks__c,
+                   Long_call_Disposition__c,
+                   Category__c,
+                   Sub_Category__c,
+                   Activity_Required__c,
+                   Milestone_Demand_Percent__c
+            FROM   Collection__c
+            WHERE  Booking__c IN :bookingIds
+            ORDER BY CreatedDate DESC
+        ]) {
+            if (!collectionMap.containsKey(c.Booking__c)) {
+                collectionMap.put(c.Booking__c, c);
+            }
+        }
+
+
+        // ===== HIGH PRIORITY LOGIC START =====
+
+// Latest disposition update date per booking
+Map<Id, Datetime> bookingLastDispositionDateMap = new Map<Id, Datetime>();
+
+Set<Id> latestCollectionIds = new Set<Id>();
+
+for(Collection__c col : collectionMap.values()){
+    latestCollectionIds.add(col.Id);
+}
+
+Map<Id, Datetime> collectionLastDispositionDateMap = new Map<Id, Datetime>();
+
+for(Collection__History h : [
+    SELECT ParentId,
+           CreatedDate
+    FROM Collection__History
+    WHERE ParentId IN :latestCollectionIds
+    AND Field = 'Long_call_Disposition__c'
+    ORDER BY CreatedDate DESC
+]){
+    if(!collectionLastDispositionDateMap.containsKey(h.ParentId)){
+        collectionLastDispositionDateMap.put(
+            h.ParentId,
+            h.CreatedDate
+        );
+    }
+}
+
+for(Id bookingId : collectionMap.keySet()){
+
+    Collection__c col = collectionMap.get(bookingId);
+
+    if(collectionLastDispositionDateMap.containsKey(col.Id)){
+        bookingLastDispositionDateMap.put(
+            bookingId,
+            collectionLastDispositionDateMap.get(col.Id)
+        );
+    }
+}
+
+// ===== HIGH PRIORITY LOGIC END =====
+
+        Map<Id, Date> earliestDueDateMap = new Map<Id, Date>();
+        for (builderopedia__Demand__c d : [
+            SELECT builderopedia__Booking__c,
+                   builderopedia__Demand_Due_Date__c
+            FROM   builderopedia__Demand__c
+            WHERE  builderopedia__Booking__c IN :bookingList
+            AND    builderopedia__Status__c  = 'Pending'
+            AND    builderopedia__Demand_Due_Date__c != null
+            ORDER BY builderopedia__Demand_Due_Date__c ASC
+        ]) {
+            Id bId = d.builderopedia__Booking__c;
+            if (!earliestDueDateMap.containsKey(bId)) {
+                earliestDueDateMap.put(bId, d.builderopedia__Demand_Due_Date__c);
+            }
+        }
+
+        Set<Id> bookingIdsWithDemands = new Set<Id>();
+        for (AggregateResult ar : [
+            SELECT builderopedia__Booking__c bId
+            FROM   builderopedia__Demand__c
+            WHERE  builderopedia__Booking__c IN :bookingList
+            AND    builderopedia__Status__c  = 'Pending'
+            GROUP BY builderopedia__Booking__c
+        ]) {
+            bookingIdsWithDemands.add((Id) ar.get('bId'));
+        }
+
+        Date today = Date.today();
+
+        Date monthEnd = Date.newInstance(      //272 -276
+    today.year(),
+    today.month(),
+    Date.daysInMonth(today.year(), today.month())
+    );
+
+       // List<BookingWrapper> result = new List<BookingWrapper>();
+       List<BookingWrapper> highPriorityBookings = new List<BookingWrapper>();
+        List<BookingWrapper> normalBookings = new List<BookingWrapper>();
+
+        for (builderopedia__Booking__c b : bookingList) {
+
+            BookingWrapper bw = new BookingWrapper();
+
+            bw.Id                  = b.Id;
+            bw.BookingName         = b.Name;
+            bw.BookingId           = b.Id;
+            bw.ProjectId           = b.builderopedia__Project__c;
+            bw.ProjectName         = b.builderopedia__Project__r != null
+                                        ? b.builderopedia__Project__r.Name : null;
+            bw.ApplicantId         = b.builderopedia__Bill_To_Applicant__c;
+            bw.ApplicantName       = b.Applicant_Name__c;
+            bw.CustomerReferenceId = b.Customer_SAP_Code__c;
+            bw.UnitId              = b.Unit__c;
+            bw.UnitName            = b.Unit__c != null ? b.Unit__r.Name : null;
+            bw.hasUnits            = b.Unit__c != null;
+            bw.hasDemands          = bookingIdsWithDemands.contains(b.Id);
+            bw.DunningLevel        = b.PS_Dunning_Level__c;
+            bw.BBADuningDate       = b.BBA_Dunning_R_1__c;
+            bw.CXSatisfactionRating      = b.Customer_Feedback__c;
+            bw.InvoiceAmountPendingTotal = b.Total_Outstanding_Value__c;
+            bw.TotalAmountReceived       = b.builderopedia__Total_Amount_Received__c;
+            bw.TotalSalesValue           = b.Total_Sales_Values__c;
+            bw.BalanceInterest   = b.Balance_Interest__c;
+            bw.InterestAccrued   = b.Interest_Accured__c;
+            bw.InterestCollected = b.Interest_Collected__c;
+            bw.InterestWaived    = b.Interest_Waived__c;
+            bw.InterestSlabs     = b.PS_Interest_Slabs__c;
+
+            Collection__c col = collectionMap.get(b.Id);
+            if (col != null) {
+                bw.PTPDate                   = col.PTP_Date__c;
+                bw.PTPAmount                 = col.PTP_Amount__c;
+                bw.Remarks                   = col.Remarks__c;
+                bw.LongCallDisposition       = col.Long_call_Disposition__c;
+                bw.CollectibleNonCollectible = col.Category__c;
+                bw.SubCategory               = col.Sub_Category__c;
+                bw.ActivityRequiredForCollection = col.Activity_Required__c;
+                bw.MilestoneDemandPercent = col.Milestone_Demand_Percent__c;
+            }
+
+            if (b.Total_Sales_Values__c != null &&
+                b.Total_Sales_Values__c != 0 &&
+                b.builderopedia__Total_Amount_Received__c != null) {
+
+                bw.BillingReceivedPercentAgainstTSV =
+                    (b.builderopedia__Total_Amount_Received__c /
+                     b.Total_Sales_Values__c * 100).setScale(2);
+            } else {
+                bw.BillingReceivedPercentAgainstTSV = 0;
+            }
+
+            if (earliestDueDateMap.containsKey(b.Id)) {
+                bw.DueDays = earliestDueDateMap.get(b.Id).daysBetween(today);
+            } else {
+                bw.DueDays = null;
+            }
+
+           //  result.add(bw);
+           
+           Date dueDate = earliestDueDateMap.get(b.Id);
+
+                        Boolean includeRecord = true;
+
+                        if(viewName == 'OVERDUE'){
+                            includeRecord =
+                                dueDate != null &&
+                                dueDate < today;
+                        }
+                        else if(viewName == 'DUE_THIS_MONTH'){
+                            includeRecord =
+                                dueDate != null &&
+                                dueDate >= today &&
+                                dueDate <= monthEnd;
+                        }
+                        else if(viewName == 'NOT_DUE'){
+                            includeRecord =
+                                dueDate != null &&
+                                dueDate > monthEnd;
+                        }
+
+                       // if(includeRecord){
+                       //     result.add(bw);
+                     //   }
+                     
+                     if(includeRecord){
+                        
+
+    Boolean isHighPriority = false;
+
+    Datetime lastDispositionDate =
+        bookingLastDispositionDateMap.get(b.Id);
+
+    if(lastDispositionDate != null){
+
+        Integer daysSinceLastCall =
+            lastDispositionDate.date().daysBetween(today);
+
+        Boolean excluded =
+            bw.CollectibleNonCollectible == 'Collectible'
+            && bw.SubCategory == 'Promise to Pay';
+
+        if(!excluded && daysSinceLastCall > 20){
+            isHighPriority = true;
+        }
+    }
+
+    if(isHighPriority){
+        highPriorityBookings.add(bw);
+    } else {
+        normalBookings.add(bw);
+    }
+}
+        }
+        //system.debug('Booking result'+result);
+
+        //return result;
+
+        highPriorityBookings.addAll(normalBookings);
+
+        System.debug('Booking result ' + highPriorityBookings);
+
+        return highPriorityBookings;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<UnitWrapper> getRelatedUnits(Id bookingId) {
+        List<UnitWrapper> units = new List<UnitWrapper>();
+        builderopedia__Booking__c bookingRec = [
+            SELECT Id, Unit__c, Unit__r.Name
+            FROM   builderopedia__Booking__c
+            WHERE  Id = :bookingId LIMIT 1
+        ];
+        if (bookingRec.Unit__c != null) {
+            UnitWrapper uw = new UnitWrapper();
+            uw.Id       = bookingRec.Unit__c;
+            uw.UnitName = bookingRec.Unit__r.Name;
+            uw.UnitNo   = bookingRec.Unit__r.Name;
+            units.add(uw);
+        }
+        return units;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<DemandWrapper> getRelatedDemands(Id bookingId) {
+        List<builderopedia__Demand__c> demandList = [
+            SELECT Id, Name,
+                   builderopedia__Demand_Reference_Number__c,
+                   Payment_Milestone_Name__c,
+                   Charge_Code__c,
+                   builderopedia__Demand_Due_Date__c,
+                   builderopedia__Taxable_Amount__c,
+                   builderopedia__Tax__c,
+                   builderopedia__Total_Amount__c
+            FROM   builderopedia__Demand__c
+            WHERE  builderopedia__Booking__c = :bookingId
+            AND    builderopedia__Status__c  = 'Pending'
+            ORDER BY Name ASC
+        ];
+
+        List<DemandWrapper> demands = new List<DemandWrapper>();
+        for (builderopedia__Demand__c d : demandList) {
+            DemandWrapper dw      = new DemandWrapper();
+            dw.Id                 = d.Id;
+            dw.DemandName         = d.Name;
+            dw.DemandSAPCode      = d.builderopedia__Demand_Reference_Number__c;
+            dw.ChargeCode         = d.Charge_Code__c;
+            dw.BillingDueDate     = d.builderopedia__Demand_Due_Date__c;
+            dw.BillingAmtBasic    = d.builderopedia__Taxable_Amount__c;
+            dw.TDSTax             = d.builderopedia__Tax__c;
+            dw.TotalBilledLessTDS = d.builderopedia__Total_Amount__c;
+            demands.add(dw);
+        }
+        return demands;
+    }
+
+    // ── ONLY CHANGE: removed cacheable=true so saved values are always returned fresh ──
+    @AuraEnabled
+    public static List<PaymentMilestoneWrapper> getPaymentMilestones(Id bookingId) {
+
+        List<PaymentMilestoneWrapper> result = new List<PaymentMilestoneWrapper>();
+
+        List<builderopedia__Payment_Milestone__c> milestones = [
+                SELECT Id, Name,
+                Billed_Unbilled_Milestone__c,
+                Projected_Date_Of_Payment__c,
+                TDS_Apllicable__c,
+                TDS_Amount__c,
+                Discount_Applied__c,
+                Discount_Amount__c,
+                Amount_After_TDS__c
+                
+
+               // Partial_Payment_Amount__c
+               
+                FROM builderopedia__Payment_Milestone__c
+            
+            WHERE  builderopedia__Booking__c = :bookingId
+            ORDER BY Name ASC
+        ];
+
+        List<builderopedia__Demand__c> demands = [
+            SELECT Id, Name,
+                   builderopedia__Payment_Milestone__c,
+                   Payment_Milestone_Name__c,
+                   builderopedia__Demand_Reference_Number__c,
+                   Charge_Code__c,
+                   builderopedia__Demand_Due_Date__c,
+                   builderopedia__Taxable_Amount__c,
+                   builderopedia__Tax__c,
+                   builderopedia__Total_Amount__c,
+                   Partial_Payment_Amount__c
+            FROM   builderopedia__Demand__c
+            WHERE  builderopedia__Booking__c = :bookingId
+        ];
+
+        Map<Id, builderopedia__Demand__c> demandByMilestoneId =
+            new Map<Id, builderopedia__Demand__c>();
+        Map<String, builderopedia__Demand__c> demandByMilestoneName =
+            new Map<String, builderopedia__Demand__c>();
+
+        for (builderopedia__Demand__c d : demands) {
+            if (d.builderopedia__Payment_Milestone__c != null &&
+                !demandByMilestoneId.containsKey(d.builderopedia__Payment_Milestone__c)) {
+                demandByMilestoneId.put(d.builderopedia__Payment_Milestone__c, d);
+            }
+            if (String.isNotBlank(d.Payment_Milestone_Name__c)) {
+                String key = d.Payment_Milestone_Name__c.toLowerCase().trim();
+                if (!demandByMilestoneName.containsKey(key)) {
+                    demandByMilestoneName.put(key, d);
+                }
+            }
+        }
+
+        Map<String, Case> tprCaseByDemandName = new Map<String, Case>();
+        for (Case c : [
+            SELECT Id, CaseNumber, Status, Subject, Approval_Status__c, Approved_Amount__c
+            FROM   Case
+            WHERE  builderopedia__Booking__c = :bookingId
+            AND    Case_Type__c = 'TPR'
+            ORDER BY CreatedDate DESC
+        ]) {
+            if (String.isNotBlank(c.Subject)) {
+                String demandNameKey = c.Subject.removeStart('TPR Case - ').toLowerCase().trim();
+                if (!tprCaseByDemandName.containsKey(demandNameKey)) {
+                    tprCaseByDemandName.put(demandNameKey, c);
+                }
+            }
+        }
+
+        for (builderopedia__Payment_Milestone__c pm : milestones) {
+
+            PaymentMilestoneWrapper row = new PaymentMilestoneWrapper();
+            row.Id                     = pm.Id;
+            row.MilestoneName          = pm.Name;
+            row.BilledUnbilled         = pm.Billed_Unbilled_Milestone__c;
+            row.ProjectedDateOfPayment = pm.Projected_Date_Of_Payment__c;
+            row.TdsApplicable          = pm.TDS_Apllicable__c;
+            row.TdsAmount              = pm.TDS_Amount__c;
+            row.DiscountApplied        = pm.Discount_Applied__c;
+            row.DiscountAmount         = pm.Discount_Amount__c;
+            //row.amountAfterTDS         = pm.Amount_After_TDS__c;
+           // row.PartialPaymentAmount   = pm.Partial_Payment_Amount__c;
+           // row.EarlierDays = pm.Earlier_Days__c;
+           
+
+            builderopedia__Demand__c demand = null;
+
+            if (demandByMilestoneId.containsKey(pm.Id)) {
+                demand = demandByMilestoneId.get(pm.Id);
+            } else {
+                String nameKey = pm.Name.toLowerCase().trim();
+                if (demandByMilestoneName.containsKey(nameKey)) {
+                    demand = demandByMilestoneName.get(nameKey);
+                }
+            }
+
+            if (demand != null) {
+                row.DemandId              = demand.Id;
+                //row.BilledUnbilled        = 'True';
+                row.DemandName            = demand.Name;
+                row.DemandReferenceNumber = demand.builderopedia__Demand_Reference_Number__c;
+                row.DemandSAPCode         = demand.builderopedia__Demand_Reference_Number__c;
+                row.ChargeCode            = demand.Charge_Code__c;
+                row.BillingDueDate        = demand.builderopedia__Demand_Due_Date__c;
+                row.BillingAmtBasic       = demand.builderopedia__Taxable_Amount__c;
+                row.TDSTax                = demand.builderopedia__Tax__c;
+                //row.TotalBilledLessTDS    = demand.builderopedia__Total_Amount__c;
+                if(pm.Amount_After_TDS__c != null)
+                {
+                    row.TotalBilledLessTDS = pm.Amount_After_TDS__c;
+                }
+                else
+                {
+                    row.TotalBilledLessTDS = demand.builderopedia__Total_Amount__c;
+                }
+                row.PartialPaymentAmount = demand.Partial_Payment_Amount__c;
+
+                String demandNameKey = demand.Name.toLowerCase().trim();
+                if (tprCaseByDemandName.containsKey(demandNameKey)) {
+                    Case existingCase  = tprCaseByDemandName.get(demandNameKey);
+                    row.CaseNumber     = existingCase.CaseNumber;
+                    row.CaseId         = existingCase.Id;
+                    row.CaseStatus     = existingCase.Status;
+                     //if (existingCase.Approval_Status__c == 'Approved By CCSO') {
+                    if (existingCase.Approval_Status__c == 'Approved - Pending SAP Posting') {
+                        row.ApprovedAmount = existingCase.Approved_Amount__c;
+                    }
+                }
+            }
+
+            result.add(row);
+        }
+        system.debug('result bookig'+result);
+
+        return result;
+    }
+
+
+    
+
+    @AuraEnabled
+    public static SaveResult saveCollectionManagement(String bookingUpdatesJson) {
+        if (String.isBlank(bookingUpdatesJson)) {
+            return new SaveResult(true, 'Nothing to save.');
+        }
+        try {
+            List<Object> rawList = (List<Object>) JSON.deserializeUntyped(bookingUpdatesJson);
+            if (rawList == null || rawList.isEmpty()) {
+                return new SaveResult(true, 'Nothing to save.');
+            }
+
+            Set<Id> bookingIds = new Set<Id>();
+            for (Object obj : rawList) {
+                Map<String, Object> row = (Map<String, Object>) obj;
+                String bId = (String) row.get('bookingId');
+                if (String.isNotBlank(bId)) bookingIds.add((Id) bId);
+            }
+            if (bookingIds.isEmpty()) {
+                return new SaveResult(false, 'No valid booking Ids found in payload.');
+            }
+
+            Date today      = Date.today();
+            Date monthStart = Date.newInstance(today.year(), today.month(), 1);
+            Date monthEnd   = monthStart.addMonths(1).addDays(-1);
+
+            DateTime monthStartDT = DateTime.newInstance(today.year(), today.month(), 1, 0, 0, 0);
+            DateTime monthEndDT   = DateTime.newInstance(monthEnd.year(), monthEnd.month(), monthEnd.day(), 23, 59, 59);
+
+            Map<Id, Collection__c> existingThisMonthMap = new Map<Id, Collection__c>();
+            for (Collection__c c : [
+                SELECT Id,
+                       Booking__c,
+                       PTP_Date__c,
+                       PTP_Amount__c,
+                       Remarks__c,
+                       Long_call_Disposition__c,
+                       Category__c,
+                       Sub_Category__c
+                FROM   Collection__c
+                WHERE  Booking__c IN :bookingIds
+                AND    CreatedDate >= :monthStartDT
+                AND    CreatedDate <= :monthEndDT
+                ORDER BY CreatedDate DESC
+            ]) {
+                if (!existingThisMonthMap.containsKey(c.Booking__c)) {
+                    existingThisMonthMap.put(c.Booking__c, c);
+                }
+            }
+
+            List<Collection__c> toUpsert = new List<Collection__c>();
+
+            for (Object obj : rawList) {
+                Map<String, Object> row = (Map<String, Object>) obj;
+
+                String bookingIdStr = (String) row.get('bookingId');
+                if (String.isBlank(bookingIdStr)) continue;
+                Id bId = (Id) bookingIdStr;
+
+                Boolean isFuturePtpMonth = false;
+                Object ptpCheck = row.get('ptpDate');
+                if (ptpCheck != null && String.isNotBlank(String.valueOf(ptpCheck))) {
+                    Date incomingPtp = Date.valueOf(String.valueOf(ptpCheck));
+                    isFuturePtpMonth = (incomingPtp.year() > today.year()) ||
+                                       (incomingPtp.year() == today.year() &&
+                                        incomingPtp.month() > today.month());
+                }
+
+                Collection__c c = (!isFuturePtpMonth && existingThisMonthMap.containsKey(bId))
+                    ? existingThisMonthMap.get(bId)
+                    : new Collection__c(Booking__c = bId);
+
+                Object ptpDateVal = row.get('ptpDate');
+                if (ptpDateVal != null && String.isNotBlank(String.valueOf(ptpDateVal))) {
+                    c.PTP_Date__c = Date.valueOf(String.valueOf(ptpDateVal));
+                }
+
+                Object ptpAmountVal = row.get('ptpAmount');
+                if (ptpAmountVal != null && String.isNotBlank(String.valueOf(ptpAmountVal))) {
+                    c.PTP_Amount__c = Decimal.valueOf(String.valueOf(ptpAmountVal));
+                }
+
+                Object remarksVal = row.get('remarks');
+                if (remarksVal != null && String.isNotBlank(String.valueOf(remarksVal))) {
+                    c.Remarks__c = String.valueOf(remarksVal);
+                }
+
+                Object lcdVal = row.get('lastCallDisposition');
+                if (lcdVal != null && String.isNotBlank(String.valueOf(lcdVal))) {
+                    c.Long_call_Disposition__c = String.valueOf(lcdVal);
+                }
+
+                Object collectibleVal = row.get('collectible');
+                if (collectibleVal != null && String.isNotBlank(String.valueOf(collectibleVal))) {
+                    c.Category__c = String.valueOf(collectibleVal);
+                }
+
+                Object subCatVal = row.get('subCategory');
+                if (subCatVal != null && String.isNotBlank(String.valueOf(subCatVal))) {
+                    c.Sub_Category__c = String.valueOf(subCatVal);
+                }
+
+
+            // NEW CODE START
+
+            Object milestonePercentVal =
+                row.get('milestoneDemandPercent');
+
+            if (
+                milestonePercentVal != null &&
+                String.isNotBlank(
+                    String.valueOf(milestonePercentVal)
+                )
+            ) {
+
+                c.Milestone_Demand_Percent__c =
+                    Decimal.valueOf(
+                        String.valueOf(milestonePercentVal)
+                    );
+            }
+            // NEW CODE END
+
+
+
+
+
+                Object activityVal = row.get('activityRequiredForCollection');
+
+                if (activityVal != null &&
+                    String.isNotBlank(String.valueOf(activityVal))) {
+
+                    c.Activity_Required__c =
+                        String.valueOf(activityVal);
+                }
+
+                toUpsert.add(c);
+            }
+
+            if (!toUpsert.isEmpty()) upsert toUpsert;
+
+            return new SaveResult(
+                true,
+                'Collection records saved successfully. Count: ' + toUpsert.size()
+            );
+        } catch (Exception ex) {
+            System.debug('saveCollectionManagement error: '
+                + ex.getMessage() + ' | ' + ex.getStackTraceString());
+            return new SaveResult(false, ex.getMessage());
+        }
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<LastCallDispositionHistoryWrapper> getLastCallDispositionHistory(Id bookingId) {
+
+        List<LastCallDispositionHistoryWrapper> result = new List<LastCallDispositionHistoryWrapper>();
+
+        List<Collection__c> colList = [
+            SELECT Id
+            FROM Collection__c
+            WHERE Booking__c = :bookingId
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+        ];
+
+        if (colList.isEmpty()) return result;
+
+        for (Collection__History h : [
+            SELECT OldValue,
+                   NewValue,
+                   CreatedDate,
+                   CreatedBy.Name
+            FROM   Collection__History
+            WHERE  ParentId = :colList[0].Id
+            AND    Field    = 'Long_call_Disposition__c'
+            ORDER BY CreatedDate DESC
+        ]) {
+            LastCallDispositionHistoryWrapper row = new LastCallDispositionHistoryWrapper();
+            row.oldValue    = String.valueOf(h.OldValue);
+            row.newValue    = String.valueOf(h.NewValue);
+            row.changedBy   = h.CreatedBy.Name;
+            row.changedDate = h.CreatedDate;
+            result.add(row);
+        }
+
+        return result;
+    }
+
+    @AuraEnabled
+    public static SaveResult saveMilestoneFields(String milestoneUpdatesJson) {
+
+        List<MilestoneUpdateInput> milestoneUpdates =
+            (List<MilestoneUpdateInput>) JSON.deserialize(
+                milestoneUpdatesJson,
+                List<MilestoneUpdateInput>.class
+            );
+
+        System.debug('saveMilestoneFields INPUT: ' + JSON.serialize(milestoneUpdates));
+
+        if (milestoneUpdates == null || milestoneUpdates.isEmpty()) {
+            return new SaveResult(true, 'Nothing to save.');
+        }
+
+        try {
+            List<builderopedia__Payment_Milestone__c> toUpdate =
+                new List<builderopedia__Payment_Milestone__c>();
+
+            // updating demand
+            List<builderopedia__Demand__c> demandUpdates =
+        new List<builderopedia__Demand__c>();
+
+    Set<Id> milestoneIds = new Set<Id>();
+
+    for (MilestoneUpdateInput mu : milestoneUpdates) {
+        if (mu.milestoneId != null) {
+            milestoneIds.add(mu.milestoneId);
+        }
+    }
+
+    Map<Id, Id> demandByMilestone = new Map<Id, Id>();
+
+    for (builderopedia__Demand__c d : [
+        SELECT Id, builderopedia__Payment_Milestone__c
+        FROM builderopedia__Demand__c
+        WHERE builderopedia__Payment_Milestone__c IN :milestoneIds
+    ]) {
+        demandByMilestone.put(
+            d.builderopedia__Payment_Milestone__c,
+            d.Id
+        );
+    }
+
+        // loop on milestone
+            for (MilestoneUpdateInput mu : milestoneUpdates) {
+                if (mu.milestoneId == null) continue;
+
+                builderopedia__Payment_Milestone__c m =
+                    new builderopedia__Payment_Milestone__c(Id = mu.milestoneId);
+
+                //if (mu.billedUnbilled != null)
+                m.Billed_Unbilled_Milestone__c = mu.billedUnbilled;
+
+                if (String.isNotBlank(mu.projectedDateOfPayment))
+                    m.Projected_Date_Of_Payment__c =
+                        Date.valueOf(mu.projectedDateOfPayment);
+
+               // if (mu.earlierDays != null)
+               // m.Earlier_Days__c = mu.earlierDays;     
+
+
+
+                if (String.isNotBlank(mu.tdsApplicable))
+                    m.TDS_Apllicable__c = mu.tdsApplicable;
+
+                if (mu.tdsAmount != null)
+                    m.TDS_Amount__c = mu.tdsAmount;
+                if (mu.amountAfterTDS != null)
+                m.Amount_After_TDS__c = mu.amountAfterTDS;
+
+            /*
+                if (String.isNotBlank(mu.discountApplied))
+                    m.Discount_Applied__c = mu.discountApplied;
+
+                if (mu.discountAmount != null)
+                    m.Discount_Amount__c = mu.discountAmount;
+
+            */
+
+            m.Discount_Applied__c = mu.discountApplied;
+
+            if (String.isBlank(mu.discountApplied)) {
+                m.Discount_Amount__c = null;
+            } else {
+                m.Discount_Amount__c = mu.discountAmount;
+            }
+
+                //if (mu.partialPaymentAmount != null)
+                //    m.Partial_Payment_Amount__c = mu.partialPaymentAmount;
+
+
+                if (
+                mu.partialPaymentAmount != null &&
+                demandByMilestone.containsKey(mu.milestoneId)
+            ) {
+                demandUpdates.add(
+                    new builderopedia__Demand__c(
+                        Id = demandByMilestone.get(mu.milestoneId),
+                        Partial_Payment_Amount__c = mu.partialPaymentAmount
+                    )
+                );
+            }
+
+
+                toUpdate.add(m);
+            }
+
+            if (!toUpdate.isEmpty()) {
+                update toUpdate;
+            }
+
+            if (!demandUpdates.isEmpty()) {
+            update demandUpdates;
+        }
+
+            return new SaveResult(
+                true,
+                'Milestones saved successfully. Count: ' + toUpdate.size()
+            );
+
+        } catch (Exception ex) {
+            return new SaveResult(false, ex.getMessage());
+        }
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<CollectibleHistoryWrapper> getCollectibleHistory(Id bookingId) {
+
+        List<CollectibleHistoryWrapper> result = new List<CollectibleHistoryWrapper>();
+
+        List<Collection__c> colList = [
+            SELECT Id
+            FROM Collection__c
+            WHERE Booking__c = :bookingId
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+        ];
+
+        if (colList.isEmpty()) return result;
+
+        for (Collection__History h : [
+            SELECT OldValue,
+                   NewValue,
+                   CreatedDate,
+                   CreatedBy.Name
+            FROM   Collection__History
+            WHERE  ParentId = :colList[0].Id
+            AND    Field    = 'Category__c'
+            ORDER BY CreatedDate DESC
+        ]) {
+            CollectibleHistoryWrapper row = new CollectibleHistoryWrapper();
+            row.oldValue    = String.valueOf(h.OldValue);
+            row.newValue    = String.valueOf(h.NewValue);
+            row.changedBy   = h.CreatedBy.Name;
+            row.changedDate = h.CreatedDate;
+            result.add(row);
+        }
+
+        return result;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<CollectibleHistoryWrapper> getSubCategoryHistory(Id bookingId) {
+
+        List<CollectibleHistoryWrapper> result = new List<CollectibleHistoryWrapper>();
+
+        List<Collection__c> colList = [
+            SELECT Id
+            FROM   Collection__c
+            WHERE  Booking__c = :bookingId
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+        ];
+
+        if (colList.isEmpty()) return result;
+
+        for (Collection__History h : [
+            SELECT OldValue,
+                   NewValue,
+                   CreatedDate,
+                   CreatedBy.Name
+            FROM   Collection__History
+            WHERE  ParentId = :colList[0].Id
+            AND    Field    = 'Sub_Category__c'
+            ORDER BY CreatedDate DESC
+        ]) {
+            CollectibleHistoryWrapper row = new CollectibleHistoryWrapper();
+            row.oldValue    = String.valueOf(h.OldValue);
+            row.newValue    = String.valueOf(h.NewValue);
+            row.changedBy   = h.CreatedBy.Name;
+            row.changedDate = h.CreatedDate;
+            result.add(row);
+        }
+
+        System.debug('SubCategoryHistory result: ' + result);
+        return result;
+    }
+
+
+// method for partial payment history
+
+@AuraEnabled(cacheable=true)
+public static List<CollectibleHistoryWrapper> getPartialPaymentHistory(Id demandId) {
+
+    List<CollectibleHistoryWrapper> result =
+        new List<CollectibleHistoryWrapper>();
+
+    for (builderopedia__Demand__History h : [
+        SELECT OldValue,
+               NewValue,
+               CreatedDate,
+               CreatedBy.Name
+        FROM builderopedia__Demand__History
+        WHERE ParentId = :demandId
+        AND Field = 'Partial_Payment_Amount__c'
+        ORDER BY CreatedDate DESC
+    ]) {
+
+        CollectibleHistoryWrapper row =
+            new CollectibleHistoryWrapper();
+
+        row.oldValue = String.valueOf(h.OldValue);
+        row.newValue = String.valueOf(h.NewValue);
+        row.changedBy = h.CreatedBy.Name;
+        row.changedDate = h.CreatedDate;
+
+        result.add(row);
+    }
+
+    return result;
+}
+
+
+
+
+
+
+// Send SOA Email
+@AuraEnabled
+public static String sendSOAEmail(Id bookingId) {
+
+    try {
+
+        // Get Booking + Bill To Applicant Email
+        builderopedia__Booking__c bookingRec = [
+            SELECT Id,
+                   Name,
+                   builderopedia__Bill_To_Applicant__r.builderopedia__Email__c,
+                   builderopedia__Bill_To_Applicant__r.Name
+            FROM builderopedia__Booking__c
+            WHERE Id = :bookingId
+            LIMIT 1
+        ];
+
+        if(String.isBlank(
+            bookingRec.builderopedia__Bill_To_Applicant__r.builderopedia__Email__c
+        )){
+            throw new AuraHandledException(
+                'Bill To Applicant Email is missing.'
+            );
+        }
+
+        // Reuse existing SOA fetch logic
+        CustomerSOAAPIHandler.SOAResponseWrapper response =
+            CustomerSOAAPIHandler.handleCustomerSOARequest(
+                bookingId,
+                'Statement_of_Account'
+            );
+
+        if(response == null || response.status != 'success'){
+            throw new AuraHandledException(
+                response != null
+                ? response.response
+                : 'Unable to fetch SOA document.'
+            );
+        }
+
+        // Create PDF attachment
+        Messaging.EmailFileAttachment attachment =
+            new Messaging.EmailFileAttachment();
+
+        attachment.setFileName(response.fileName);
+        attachment.setBody(
+            EncodingUtil.base64Decode(response.base64Pdf)
+        );
+        attachment.setContentType('application/pdf');
+
+        // Email
+        Messaging.SingleEmailMessage mail =
+            new Messaging.SingleEmailMessage();
+
+        mail.setToAddresses(
+            new List<String>{
+                bookingRec.builderopedia__Bill_To_Applicant__r.builderopedia__Email__c
+            }
+        );
+
+        mail.setSubject('Statement Of Account');
+
+        mail.setHtmlBody(
+            'Dear Customer,<br/><br/>' +
+            'Please find attached your latest Statement of Account.<br/><br/>' +
+            'Regards,<br/>' +
+            'Collections Team'
+        );
+
+        mail.setFileAttachments(
+            new Messaging.EmailFileAttachment[]{
+                attachment
+            }
+        );
+
+        Messaging.sendEmail(
+            new Messaging.SingleEmailMessage[]{
+                mail
+            }
+        );
+
+        return 'Email sent successfully';
+
+    } catch(Exception e){
+
+        throw new AuraHandledException(
+            e.getMessage()
+        );
+
+    }
+}
+
+
+
+
+
+
+
+    @AuraEnabled
+    public static TPRCaseResult createTPRCase(Id demandId , Decimal earlierDays , Decimal requestedAmount) {
+
+
+        Decimal reqAmt = requestedAmount != null
+    ? requestedAmount
+    : 0;
+
+        try {
+            List<builderopedia__Demand__c> demandList = [
+                SELECT Id,
+                       Name,
+                       builderopedia__Booking__c,
+                       builderopedia__Booking__r.builderopedia__Project__c,
+                       builderopedia__Booking__r.builderopedia__Bill_To_Applicant__c,
+                        builderopedia__Payment_Milestone__c
+                FROM   builderopedia__Demand__c
+                WHERE  Id = :demandId
+                LIMIT 1
+            ];
+
+            //if (demandList.isEmpty()) {
+             //   throw new AuraHandledException('Demand record not found. Id: ' + demandId);
+            //}
+
+if (demandList.isEmpty()) {
+
+    builderopedia__Payment_Milestone__c milestoneRec = [
+        SELECT Id,
+               Name,
+               builderopedia__Booking__c,
+               builderopedia__Booking__r.builderopedia__Project__c,
+               builderopedia__Booking__r.builderopedia__Bill_To_Applicant__c
+        FROM builderopedia__Payment_Milestone__c
+        WHERE Id = :demandId
+        LIMIT 1
+    ];
+
+    String expectedSubject = 'TPR Case - ' + milestoneRec.Name;
+
+    List<Case> existingCases = [
+        SELECT Id, CaseNumber, Status
+        FROM Case
+        WHERE builderopedia__Booking__c = :milestoneRec.builderopedia__Booking__c
+        AND Case_Type__c = 'TPR'
+        AND Subject = :expectedSubject
+        LIMIT 1
+    ];
+
+    if (!existingCases.isEmpty()) {
+        throw new AuraHandledException(
+            'TPR Case is already created. Case # ' +
+            existingCases[0].CaseNumber
+        );
+    }
+
+    List<RecordType> rtList = [
+        SELECT Id
+        FROM RecordType
+        WHERE SObjectType = 'Case'
+        AND Name = 'Customer Service'
+        LIMIT 1
+    ];
+
+    Case newCase = new Case(
+        Status               = 'New',
+        Subject              = expectedSubject,
+        Origin               = 'Others',
+        Process_Type__c      = 'TPR',
+        Case_Type__c         = 'TPR',
+        Case_Sub_Type__c     = 'TPR',
+        Case_Sub_Sub_Type__c = 'Others',
+        builderopedia__Booking__c = milestoneRec.builderopedia__Booking__c,
+        builderopedia__Project__c = milestoneRec.builderopedia__Booking__r.builderopedia__Project__c,
+        Applicant__c              = milestoneRec.builderopedia__Booking__r.builderopedia__Bill_To_Applicant__c,
+        Description               = 'Auto-created from Collection screen',
+        Earlier_Days__c = earlierDays,
+        Payment_Milestone__c      = milestoneRec.Id,
+        Requested_Amount__c  = reqAmt
+    );
+
+    if (!rtList.isEmpty()) {
+        newCase.RecordTypeId = rtList[0].Id;
+    }
+
+    insert newCase;
+
+    Case inserted = [
+        SELECT Id, CaseNumber
+        FROM Case
+        WHERE Id = :newCase.Id
+        LIMIT 1
+    ];
+
+    return new TPRCaseResult(
+        inserted.Id,
+        inserted.CaseNumber
+    );
+}
+
+
+
+            builderopedia__Demand__c demandRec = demandList[0];
+            String expectedSubject = 'TPR Case - ' + demandRec.Name;
+            List<Case> existingCases = [
+                SELECT Id, CaseNumber, Status
+                FROM   Case
+                WHERE  builderopedia__Booking__c = :demandRec.builderopedia__Booking__c
+                AND    Case_Type__c              = 'TPR'
+                AND    Subject                   = :expectedSubject
+                LIMIT 1
+            ];
+
+            if (!existingCases.isEmpty()) {
+                throw new AuraHandledException(
+                    'TPR Case is already created. Case # ' + existingCases[0].CaseNumber
+                );
+            }
+
+
+
+            List<RecordType> rtList = [
+                SELECT Id
+                FROM   RecordType
+                WHERE  SObjectType = 'Case'
+                AND    Name        = 'Customer Service'
+                LIMIT 1
+            ];
+
+            Case newCase = new Case(
+                Status               = 'New',
+                Subject              = expectedSubject,
+                Origin               = 'Others',
+                Process_Type__c      = 'TPR',
+                Case_Type__c         = 'TPR',
+                Case_Sub_Type__c     = 'TPR',
+                Case_Sub_Sub_Type__c = 'Others',
+                builderopedia__Booking__c = demandRec.builderopedia__Booking__c,
+                builderopedia__Project__c = demandRec.builderopedia__Booking__r.builderopedia__Project__c,
+                Applicant__c              = demandRec.builderopedia__Booking__r.builderopedia__Bill_To_Applicant__c,
+                Description               = 'Auto-created from Collection screen',
+                Earlier_Days__c           = earlierDays,
+                Payment_Milestone__c      = demandRec.builderopedia__Payment_Milestone__c,
+                Requested_Amount__c       = reqAmt
+            );
+
+            if (!rtList.isEmpty()) {
+                newCase.RecordTypeId = rtList[0].Id;
+            }
+
+            insert newCase;
+            Case inserted = [SELECT Id, CaseNumber FROM Case WHERE Id = :newCase.Id LIMIT 1];
+
+            System.debug('Created Case Id = ' + inserted.Id + ', Number = ' + inserted.CaseNumber);
+
+            return new TPRCaseResult(inserted.Id, inserted.CaseNumber);
+
+        } catch (AuraHandledException ahe) {
+            throw ahe;
+        } catch (Exception e) {
+            System.debug('TPR CASE ERROR => ' + e.getMessage());
+            System.debug('TPR CASE STACK => ' + e.getStackTraceString());
+            throw new AuraHandledException('Error creating TPR Case: ' + e.getMessage());
+        }
+    }
+
+
+@AuraEnabled
+public static String sendDemandEmail(Id demandId)
+{
+    try
+    {
+        Map<String,Object> flowInputs = new Map<String,Object>();
+        flowInputs.put('varDemandId', demandId);
+
+        Flow.Interview.Send_Demand_Email flowObj =
+            new Flow.Interview.Send_Demand_Email(flowInputs);
+
+        flowObj.start();
+
+        return 'Demand email sent successfully.';
+    }
+    catch(Exception e)
+    {
+        throw new AuraHandledException(
+            'Error sending email: ' + e.getMessage()
+        );
+    }
+}
+
+
+// @AuraEnabled
+// public static String sendDemandEmail(Id demandId)
+// {
+//     System.debug('RECEIVED ID = ' + demandId);
+
+//     return 'Received Id = ' + demandId;
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
