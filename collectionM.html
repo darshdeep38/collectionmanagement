@@ -1,0 +1,1476 @@
+<template>
+
+    <div class="slds-page-header slds-page-header_record-home">
+        <div class="slds-page-header__row">
+            <div class="slds-page-header__col-title">
+                <div class="slds-media">
+                    <div class="slds-media__figure">
+                        <lightning-icon icon-name="standard:case" size="medium"></lightning-icon>
+                    </div>
+                    <div class="slds-media__body">
+                        <div class="slds-media__body" style="font-weight: bold;font-size: 16px">
+                            Collections
+                        </div>
+                        <lightning-button-menu alternative-text="Select List View" label={selectedListViewLabel}
+                            onselect={handleListViewChange} variant="bare" menu-alignment="left" class="listview-name">
+                            <template for:each={listviewOptions} for:item="item">
+                                <lightning-menu-item key={item.value} value={item.value} label={item.label}>
+                                </lightning-menu-item>
+                            </template>
+                        </lightning-button-menu>
+                        <lightning-button-icon class="slds-p-around_medium lgc-bg" icon-name={pinnedIcon}
+                            variant="border-filled" size="small" title="Pin" onclick={togglePin}>
+                        </lightning-button-icon>
+                        <p>{totalitems} items • Sorted by {sortedBy}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-wrapper" style="overflow:visible;">
+                <lightning-input class="search-input" type="search" value={searchKey} placeholder="Search this list.."
+                    onkeyup={handleSearch}>
+                </lightning-input>
+                <lightning-button-icon icon-name="utility:refresh" variant="border-filled" size="small"
+                    class="refresh-btn" title="Refresh" onclick={handlerefresh}>
+                </lightning-button-icon>
+                <!--
+                <div class="filter-container filter-btn">
+                    <lightning-button-icon icon-name="utility:filterList" variant="border-filled" size="small"
+                        title="Filters" onclick={handlefilter}>
+                    </lightning-button-icon>
+                    <template if:true={showFilters}>
+                        <div class="filter-popup slds-box">
+                            <lightning-combobox name="filterLogic" label="Condition Requirements to Execute Outcome"
+                                value={filterLogicSelected} placeholder="None" options={filterLogicOptions}
+                                onchange={handlefilterLogicChange}>
+                            </lightning-combobox>
+                            <br>
+                            <template for:each={filters} for:item="filter">
+                                <div key={filter.id}>
+                                    <div class="slds-grid slds-gutters slds-align_absolute-center">
+                                        <div class="slds-col slds-size_4-of-12">
+                                            <lightning-combobox label="Select Field" value={filter.field}
+                                                data-id={filter.id} options={fieldOptions} onchange={handleFieldChange}
+                                                required="true">
+                                            </lightning-combobox>
+                                        </div>
+                                        <div class="slds-col slds-size_3-of-12">
+                                            <lightning-combobox label="Operator" value={filter.operator}
+                                                data-id={filter.id} options={operatorOptions}
+                                                onchange={handleOperatorChange}>
+                                            </lightning-combobox>
+                                        </div>
+                                        <div class="slds-col slds-size_4-of-12">
+                                            <template if:true={filter.showInput}>
+                                                <lightning-input label="Value" value={filter.value} data-id={filter.id}
+                                                    onchange={handleValueChange}>
+                                                </lightning-input>
+                                            </template>
+                                            <template if:true={filter.showCombobox}>
+                                                <lightning-combobox label="Value" value={filter.value}
+                                                    options={filter.valueOptions} data-id={filter.id}
+                                                    onchange={handleValueChange}>
+                                                </lightning-combobox>
+                                            </template>
+                                            <template if:true={filter.showDate}>
+                                                <lightning-input type="date" label="Created Date"
+                                                    value={filter.dateValue} data-id={filter.id}
+                                                    onchange={handleDateChange}>
+                                                </lightning-input>
+                                            </template>
+                                        </div>
+                                        <div
+                                            class="slds-col slds-size_1-of-12 slds-align_absolute-center slds-m-top_large">
+                                            <lightning-button-icon data-id={filter.id} icon-name="utility:delete"
+                                                variant="border-filled" alternative-text="Delete"
+                                                title="Delete Filter Criteria" onclick={handleDeleteCondition}>
+                                            </lightning-button-icon>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            <template if:true={customLogic}>
+                                <div class="slds-m-top_medium">
+                                    <label class="slds-form-element__label" for="custom-logic">Condition Logic</label>
+                                    <lightning-helptext
+                                        content="Use parentheses, AND, OR, and NOT to customize the logic. Example: (1 AND 2 AND 3) OR 4">
+                                    </lightning-helptext>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input id="custom-logic" type="text" variant="label-hidden"
+                                            value={customLogicValue} onchange={handleCustomLogicChange}>
+                                        </lightning-input>
+                                    </div>
+                                    <template if:true={customLogicError}>
+                                        <div class="slds-text-color_error slds-p-top_x-small">{customLogicError}</div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template if:false={customLogic}>
+                                <div class="slds-m-top_medium">
+                                    <label class="slds-form-element__label">Condition Logic</label>
+                                    <lightning-input value={customLogicValue} disabled variant="label-hidden">
+                                    </lightning-input>
+                                </div>
+                            </template>
+                            <br>
+                            <lightning-button label="Add Condition" variant="border-filled" icon-name="utility:add"
+                                alternative-text="Add New Filter Criteria" onclick={handleAddCondition}>
+                            </lightning-button>
+                            <div class="slds-m-top_small">
+                                <lightning-button label="Apply" onclick={applyFilters}></lightning-button>
+                                <lightning-button label="Clear" onclick={clearFilters} class="slds-m-left_small">
+                                </lightning-button>
+                            </div>
+                        </div>
+                    </template>
+                    
+                </div>
+                -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-container" style="overflow-x:auto; overflow-y:visible;">
+        <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-table_col-bordered"
+            style="width:max-content; table-layout:fixed; overflow:visible;">
+            <thead>
+                <tr>
+                    <th scope="col" style="text-align:center; white-space:nowrap; min-width:40px;">
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th scope="col" style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Booking">Booking</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortBookingName}>{bookingnamearrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th scope="col" style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Customer Code">Customer Code</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:60px;">
+                        <span class="slds-truncate" title="Unit No.">Unit No.</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Project Name">Project Name</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortProjectName}>{projectnamearrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Customer Name">Customer Name</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortCustomerName}>{customernameArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:100px;">
+                        <span title="Invoice Amount - Pending Amount Total">Invoice Amount </span>
+                        <p>- Pending Amount Total</p>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortInvoiceAmount}>{invoiceamountArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="BBA Dunning Status">BBA Dunning Status</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortBBADunningStatus}>{bbadunningstatusArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    
+                    <th style="text-align:center; white-space:nowrap; min-width:60px;">
+                        <span class="slds-truncate" title="Due Days">Due Days</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortDueDays}>{duedaysArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+
+
+                    <th scope="col" style="width: 200px;">
+                        <div class="slds-th__action slds-th__action_form">
+                            <span class="slds-truncate">PTP Date</span>
+                            <span style="cursor:pointer; margin-left:6px;" onclick={sortPTPDate}>
+                    {ptpDateArrow}
+                </span>
+                        </div>
+                        <div
+                            style="font-size:10px; font-weight:normal; color:#555; white-space:normal; line-height:1.3; margin-top:2px;">
+                            <p> Freeze after 5th working day of every month as </p>
+                            <p>First PTP,ability to allow RM to update</p>
+                            <p>based on customers promise </p>
+                        </div>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="min-width:150px; text-align:center;">
+                        <span class="slds-truncate" title="PTP Amount">PTP Amount</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortPTPAmount}>{ptpamountArrow}</span>
+                        <div
+                            style="font-size:10px; font-weight:normal; color:#555; white-space:normal; line-height:1.3; margin-top:2px;">
+                            <p> Freeze after 5th working day of every month as </p>
+                            <p> First PTP, ability to allow RM to update </p>
+                            <p>based on customers promise</p>
+                        </div>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <!-- CHANGE 1: New "% of Milestone/Demand" column header in booking layout -->
+                    <th style="text-align:center; white-space:nowrap; min-width:120px;">
+                        <span class="slds-truncate" title="% of Milestone/Demand">% of Milestone / Demand</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:left; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Collectible/Non-Collectible">Collectible / Non-Collectible</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortCollectible}>{collectibleArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="min-width:180px; text-align:left;">
+                        <span title="Sub-Category">Sub-Category </span>
+                        <p>(Coll-Non / Collectible Reason) </p>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Last Call Disposition">Last Call Disposition</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortLastCallDisposition}>{lastcalldispositionArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Remarks">Remarks</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="min-width:180px; text-align:center;">
+                        <span title="Activity Required for Collection">Activity Required for Collection</span>
+                        
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    
+                    <th style="min-width:150px; text-align:center;">
+                        <span title="Billing Received % Against TSV">Billing Received % Against TSV</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortBillingPercent}>{billingpercentArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Dunning Level">Dunning Level</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortDunningLevel}>{dunninglevelArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Dunning Date">Dunning Date</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortDunningDate}>{dunningdateArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+
+
+                <th style="text-align:center; color:inherit; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="BBA Duning Date">BBA Duning Date</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortBBADuningDate}>{bbadunIngdateArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+
+                    <th style="text-align:center; white-space:nowrap; min-width:120px;">
+                    <span class="slds-truncate" title="Booking Type">Booking Type</span>
+                    <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                </th>
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="Actions">Actions</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+
+                    <th style="text-align:center; white-space:nowrap; min-width:80px;">
+                        <span class="slds-truncate" title="CX Satisfaction Rating">CX Satisfaction Rating</span>
+                        <span style="cursor:pointer; margin-left:6px;" onclick={sortCXRating}>{cxratingArrow}</span>
+                        <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+                    </th>
+
+
+                </tr>
+            </thead>
+
+            <tbody>
+                <template for:each={visibleRows} for:item="row">
+                    <tr key={row.Id}>
+                        <td style="width:2.5rem; text-align:center;">
+                            <template if:true={row.hasDemands}>
+                                <lightning-button-icon icon-name={row.bookingIcon} size="small" variant="border-filled"
+                                    data-id={row.Id} title="Show Related Demands" onclick={toggleBookingDemands}>
+                                </lightning-button-icon>
+                            </template>
+                            <template if:false={row.hasDemands}>
+                                <span style="display:inline-block; width:24px;"></span>
+                            </template>
+                        </td>
+                        <td style="text-align:left; white-space:nowrap;">
+                            <a data-id={row.BookingId} onclick={openRecord}
+                                style="cursor:pointer;">{row.BookingName}</a>
+                        </td>
+                        <td style="text-align:center;">{row.CustomerReferenceId}</td>
+                        <td style="text-align:center;">
+                            <template if:true={row.UnitId}>
+                                <a data-id={row.UnitId} onclick={openRecord} style="cursor:pointer;">{row.UnitName}</a>
+                            </template>
+                            <template if:false={row.UnitId}>
+                                {row.UnitNo}
+                            </template>
+                        </td>
+                        <td style="text-align:center;">
+                            <a data-id={row.ProjectId} onclick={openRecord}
+                                style="cursor:pointer;">{row.ProjectName}</a>
+                        </td>
+                        <td style="text-align:center;">
+                            <a data-id={row.ApplicantId} onclick={openRecord}
+                                style="cursor:pointer;">{row.ApplicantName}</a>
+                        </td>
+                        <td style="text-align:center;">{row.InvoiceAmountPendingTotal}</td>
+                        <td style="text-align:center;">{row.DunningLevel}</td>
+                        
+                        <td style="text-align:center;">{row.DueDays}</td>
+                       <td style="text-align:center; padding:4px; border:1px solid #ddd;">
+    <div class="slds-form-element">
+        <div class="slds-form-element__control">
+            <input
+                type="date"
+                class="slds-input"
+                value={row.PTP_Date}
+                data-id={row.Id}
+                data-field="PTP_Date__c"
+                onchange={handleBookingFieldChange}
+                disabled={row.ptpDateFrozen}
+                style="min-width:130px; font-size:12px;" />
+        </div>
+    </div>
+</td>
+
+
+                        
+                        <td style="text-align:center; overflow:visible;">
+                            <lightning-input type="number" variant="label-hidden" value={row.PTP_Amount}
+                                placeholder="Enter Amount" data-id={row.Id} data-field="PTP_Amount__c"
+                                onchange={handleBookingFieldChange}>
+                            </lightning-input>
+                        </td>
+
+                        <td style="text-align:center; overflow:visible;">
+                            <lightning-input type="number" variant="label-hidden" value={row.MilestoneDemandPercent}
+                                placeholder="Enter %" min="0" max="100" data-id={row.Id}
+                                data-field="MilestoneDemandPercent" onchange={handleBookingFieldChange}>
+                            </lightning-input>
+                        </td>
+
+                        <td style="text-align:left; overflow:visible; position:relative;">
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <!--<lightning-combobox class="CollectCombobox" variant="label-hidden"
+                                    value={row.CollectibleNonCollectible} options={collectibleOptions} data-id={row.Id}
+                                    data-field="CollectibleNonCollectible" onchange={handleRowChange}
+                                    disabled={row.disableCollectible} style="flex:1;">
+                                </lightning-combobox>-->
+
+                                <div class="slds-combobox_container" style="flex:1;">
+    <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" role="none">
+        <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+            <button type="button"
+                class="slds-input slds-combobox__input"
+                data-id={row.Id}
+                onclick={toggleCollectibleDropdown}
+                disabled={row.disableCollectible}
+                style="width:100%; text-align:left; background:#fff; cursor:pointer; box-sizing:border-box;">
+                {row.CollectibleNonCollectibleLabel}
+            </button>
+            <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                <lightning-icon icon-name="utility:down" size="xx-small"
+                    class="slds-icon-text-default"></lightning-icon>
+            </span>
+        </div>
+    </div>
+
+    <template if:true={row.showCollectibleDropdown}>
+        <ul style={row.collectibleDropdownStyle}
+            class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid"
+            role="listbox">
+            <template for:each={row.collectibleOptionsWithState} for:item="opt">
+                <li key={opt.value} role="presentation" class="slds-listbox__item">
+                    <div class={opt.optionClass}
+                        data-id={row.Id}
+                        data-value={opt.value}
+                        data-label={opt.label}
+                        onclick={selectCollectibleOption}
+                        role="option">
+                        <span class="slds-media__figure slds-listbox__option-icon">
+                            <template if:true={opt.isSelected}>
+                                <lightning-icon icon-name="utility:check" size="x-small"></lightning-icon>
+                            </template>
+                        </span>
+                        <span class="slds-media__body">
+                            <span class="slds-truncate">{opt.label}</span>
+                        </span>
+                    </div>
+                </li>
+            </template>
+        </ul>
+    </template>
+</div>
+
+                                <!-- Separate hover trigger — only this shows/hides history -->
+                                <div style="position:relative; display:inline-block;">
+                                    <lightning-icon icon-name="utility:info" size="xx-small"
+                                        alternative-text="View history" data-id={row.Id}
+                                        onmouseover={handleCollectibleMouseOver} onmouseout={handleCollectibleMouseOut}>
+                                    </lightning-icon>
+
+                                    <template if:true={row.showCollectibleHistory}>
+                                         <div style={row.collectibleTooltipStyle}>
+                                            <template if:false={row.collectibleHistory.length}>
+                                                <div class="history-row" style="color:#888; font-style:italic;">
+                                                    No history found
+                                                </div>
+                                            </template>
+                                            <template for:each={row.collectibleHistory} for:item="hist">
+                                                <div key={hist.changedDate} class="history-row">
+                                                    <div><strong>{hist.changedBy}</strong></div>
+                                                    <div>{hist.oldValue} → {hist.newValue}</div>
+                                                    <div class="history-date">{hist.formattedDate}</div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </td>
+
+
+                        <td style="text-align:left; overflow:visible; position:relative;">
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <div style="flex:1;">
+
+                                    <!--<template if:true={row.isCollectible}>
+                                        <lightning-combobox variant="label-hidden" value={row.SubCategory}
+                                            options={collectibleSubOptions} data-id={row.Id} data-field="SubCategory"
+                                            onchange={handleRowChange} disabled={row.disableSubCategory}>
+                                        </lightning-combobox>
+                                    </template>
+                                    <template if:true={row.isNonCollectible}>
+                                        <lightning-combobox variant="label-hidden" value={row.SubCategory}
+                                            options={nonCollectibleSubOptions} data-id={row.Id} data-field="SubCategory"
+                                            onchange={handleRowChange} required="true"
+                                            disabled={row.disableSubCategory}>
+                                        </lightning-combobox>
+                                        <template if:true={row.subCategoryError}>
+                                            <div style="color:#c23934; font-size:11px; margin-top:2px;">
+                                                Please select a Sub-Category for Non-Collectible.
+                                            </div>
+                                        </template>
+                                    </template>-->
+
+                                    <div class="slds-combobox_container">
+    <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" role="none">
+        <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+            <button type="button"
+                class="slds-input slds-combobox__input"
+                data-id={row.Id}
+                onclick={toggleSubCategoryDropdown}
+                disabled={row.disableSubCategory}
+                style="width:100%; text-align:left; background:#fff; cursor:pointer; box-sizing:border-box;">
+                {row.SubCategoryLabel}
+            </button>
+            <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                <lightning-icon icon-name="utility:down" size="xx-small"
+                    class="slds-icon-text-default"></lightning-icon>
+            </span>
+        </div>
+    </div>
+
+    <template if:true={row.showSubCategoryDropdown}>
+        <ul style={row.subCategoryDropdownStyle}
+            class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid"
+            role="listbox">
+            <template for:each={row.subCategoryOptionsWithState} for:item="opt">
+                <li key={opt.value} role="presentation" class="slds-listbox__item">
+                    <div class={opt.optionClass}
+                        data-id={row.Id}
+                        data-value={opt.value}
+                        data-label={opt.label}
+                        onclick={selectSubCategoryOption}
+                        role="option">
+                        <span class="slds-media__figure slds-listbox__option-icon">
+                            <template if:true={opt.isSelected}>
+                                <lightning-icon icon-name="utility:check" size="x-small"></lightning-icon>
+                            </template>
+                        </span>
+                        <span class="slds-media__body">
+                            <span class="slds-truncate">{opt.label}</span>
+                        </span>
+                    </div>
+                </li>
+            </template>
+        </ul>
+    </template>
+</div>
+
+<template if:true={row.isNonCollectible}>
+    <template if:true={row.subCategoryError}>
+        <div style="color:#c23934; font-size:11px; margin-top:2px;">
+            Please select a Sub-Category for Non-Collectible.
+        </div>
+    </template>
+</template>
+
+
+
+
+                                </div>
+
+                                <div style="position:relative; display:inline-block;">
+                                    <lightning-icon icon-name="utility:info" size="xx-small"
+                                        alternative-text="View history" data-id={row.Id}
+                                        onmouseover={handleSubCategoryMouseOver} onmouseout={handleSubCategoryMouseOut}>
+                                    </lightning-icon>
+
+                                    <template if:true={row.showSubCategoryHistory}>
+                                            <div style={row.subCategoryTooltipStyle}>
+
+                                            <template if:false={row.subCategoryHistory.length}>
+                                                <div class="history-row" style="color:#888; font-style:italic;">
+                                                    No history found
+                                                </div>
+                                            </template>
+                                            <template for:each={row.subCategoryHistory} for:item="hist">
+                                                <div key={hist.changedDate} class="history-row">
+                                                    <div><strong>{hist.changedBy}</strong></div>
+                                                    <div>{hist.oldValue} → {hist.newValue}</div>
+                                                    <div class="history-date">{hist.formattedDate}</div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="text-align:center; position:relative;">
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <lightning-input type="text" variant="label-hidden" value={row.LastCallDisposition}
+                                    data-id={row.Id} data-field="LastCallDisposition" onchange={handleRowChange}
+                                    style="flex:1;">
+                                </lightning-input>
+
+                                <div style="position:relative; display:inline-block;">
+                                    <lightning-icon icon-name="utility:info" size="xx-small"
+                                        alternative-text="View history" data-id={row.Id}
+                                        onmouseover={handleDispositionMouseOver} onmouseout={handleDispositionMouseOut}>
+                                    </lightning-icon>
+
+                                    <template if:true={row.showDispositionHistory}>
+    <div style={row.dispositionTooltipStyle}>
+
+        <template if:true={row.hasDispositionHistory}>
+            <template for:each={row.dispositionHistory} for:item="hist">
+                <div key={hist.changedDate} class="history-row">
+                    <div><strong>{hist.changedBy}</strong></div>
+                    <div>{hist.oldValue} → {hist.newValue}</div>
+                    <div class="history-date">{hist.formattedDate}</div>
+                </div>
+            </template>
+        </template>
+
+        <template if:false={row.hasDispositionHistory}>
+            <div style="color:#888; font-style:italic; padding:4px;">
+                No history found
+            </div>
+        </template>
+
+    </div>
+</template>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="text-align:center;">
+<lightning-input type="text" variant="label-hidden" value={row.Remarks} data-id={row.Id}
+        data-field="Remarks" onchange={handleRowChange}>
+</lightning-input>
+<template if:true={row.remarksError}>
+<div style="color:#c23934; font-size:11px; margin-top:2px;">
+            Remarks required for Non-Collectible.
+</div>
+</template>
+</td>
+                        <!--<td style="text-align:left; overflow:visible;">
+                            <lightning-combobox variant="label-hidden" value={row.ActivityRequiredForCollection}
+                                options={activityOptions} placeholder="Select Activity" data-id={row.Id}
+                                data-field="ActivityRequiredForCollection" onchange={handleRowChange}>
+                            </lightning-combobox>
+
+                            
+                        </td>-->
+
+                       <td style="text-align:left; overflow:visible; position:relative; display:flex; align-items:center; gap:6px;">
+    <div class="slds-combobox_container" style="flex:1; min-width:0;">
+        <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" role="none">
+            <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                <button type="button"
+                    class="slds-input slds-combobox__input"
+                    data-id={row.Id}
+                    onclick={toggleActivityDropdown}
+                    style="width:100%; text-align:left; background:#fff; cursor:pointer; box-sizing:border-box;">
+                    {row.ActivityRequiredForCollectionLabel}
+                </button>
+                <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                    <lightning-icon icon-name="utility:down" size="xx-small"
+                        class="slds-icon-text-default"></lightning-icon>
+                </span>
+            </div>
+        </div>
+
+        <template if:true={row.showActivityDropdown}>
+            <ul style={row.activityDropdownStyle}
+                class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid"
+                role="listbox">
+                <template for:each={row.activityOptionsWithState} for:item="opt">
+                    <li key={opt.value} role="presentation" class="slds-listbox__item">
+                        <div class={opt.optionClass}
+                            data-id={row.Id}
+                            data-value={opt.value}
+                            data-label={opt.label}
+                            onclick={selectActivityOption}
+                            role="option">
+                            <span class="slds-media__figure slds-listbox__option-icon">
+                                <template if:true={opt.isSelected}>
+                                    <lightning-icon icon-name="utility:check" size="x-small"></lightning-icon>
+                                </template>
+                            </span>
+                            <span class="slds-media__body">
+                                <span class="slds-truncate">{opt.label}</span>
+                            </span>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+        </template>
+    </div>
+
+    <!-- info icon + tooltip, now aligned inline via flex -->
+    <div style="position:relative; display:inline-block; flex-shrink:0;">
+        <lightning-icon icon-name="utility:info" size="xx-small"
+            alternative-text="View booking info" data-id={row.Id}
+            onmouseover={handleBookingInfoMouseOver} onmouseout={handleBookingInfoMouseOut}>
+        </lightning-icon>
+
+        <template if:true={row.showBookingInfo}>
+            <div style={row.bookingInfoStyle}>
+                <div class="history-row">
+                    <strong>Bank Name:</strong> {row.BankName}
+                </div>
+                <div class="history-row">
+                    <strong>Mortgage:</strong> {row.Mortgage}
+                </div>
+                <div class="history-row">
+                    <strong>Sanction Date:</strong> {row.SanctionDate}
+                </div>
+                <div class="history-row">
+                    <strong>Welcome Call Date:</strong> {row.WelcomeEmailDate}
+                </div>
+            </div>
+        </template>
+    </div>
+</td>
+                        
+                        <td style="text-align:center;">
+                            <template if:true={row.BillingReceivedPercentAgainstTSV}>
+                                {row.BillingReceivedPercentAgainstTSV}%
+                            </template>
+                            <template if:false={row.BillingReceivedPercentAgainstTSV}>
+                                0%
+                            </template>
+                        </td>
+                        <td style="text-align:center;">{row.DunningLevel}</td>
+                        <td style="text-align:center;">
+                            <lightning-formatted-date-time value={row.DunningDate} year="numeric" month="2-digit"
+                                day="2-digit">
+                            </lightning-formatted-date-time>
+                        </td>
+
+                        <td style="text-align:center;">
+                            <lightning-formatted-date-time value={row.BBADuningDate} year="numeric" month="2-digit"
+                                day="2-digit">
+                            </lightning-formatted-date-time>
+                        </td>
+
+                        <td style="text-align:center;">
+    {row.BookingType}
+</td>
+
+                        <td style="text-align:left; overflow:visible;">
+                            <lightning-button-menu icon-name="utility:down" variant="bare" alternative-text="Actions"
+                                menu-alignment="right" data-id={row.Id} onselect={handleActionMenuSelect}>
+                                <template for:each={actionOptions} for:item="action">
+                                    <lightning-menu-item key={action.value} value={action.value} label={action.label}>
+                                    </lightning-menu-item>
+                                </template>
+                            </lightning-button-menu>
+                        </td>
+
+                        <td style="text-align:center;">
+                            <template for:each={row.cxStars} for:item="star">
+                                <span key={star.value}
+                                class={star.classMap}
+                                data-value={star.value}>★</span>
+                            </template>
+                        </td>
+
+
+
+
+                    </tr>
+
+
+                    <template if:true={row.demandsExpanded}>
+                        <tr key={row.Id}
+                         style=" overflow:visible; position:relative;">
+                            <td colspan="24" style="padding:0;overflow:visible; position:relative; z-index:1;">
+                                <div class="slds-p-around_x-small" style="background-color:#f3f3f3; overflow-y:visible;">
+
+
+                                   <!--<div class="interest-summary-bar" data-interest-bar="true">
+
+                                        <div class="interest-card interest-card--total">
+                                            <div class="interest-resize-handle"
+                                                onmousedown={handleInterestResizeMouseDown}></div>
+                                            <div class="interest-count">{row.FormattedBalanceInterest}</div>
+                                            <div class="interest-label">Total Interest</div>
+                                        </div>
+
+                                        <div class="interest-card interest-card--outstanding">
+                                            <div class="interest-resize-handle"
+                                                onmousedown={handleInterestResizeMouseDown}></div>
+                                            <div class="interest-count">{row.FormattedInterestAccrued}</div>
+                                            <div class="interest-label">Interest Outstanding</div>
+                                        </div>
+
+                                        <div class="interest-card interest-card--collected">
+                                            <div class="interest-resize-handle"
+                                                onmousedown={handleInterestResizeMouseDown}></div>
+                                            <div class="interest-count">{row.FormattedInterestCollected}</div>
+                                            <div class="interest-label">Interest Collected</div>
+                                        </div>
+
+                                        <div class="interest-card interest-card--waived">
+                                            <div class="interest-resize-handle"
+                                                onmousedown={handleInterestResizeMouseDown}></div>
+                                            <div class="interest-count">{row.FormattedInterestWaived}</div>
+                                            <div class="interest-label">Interest Waived</div>
+                                        </div>
+
+                                        <div class="interest-card interest-card--slabs">
+                                            <div class="interest-resize-handle"
+                                                onmousedown={handleInterestResizeMouseDown}></div>
+                                            <div class="interest-count">{row.FormattedInterestSlabs}</div>
+                                            <div class="interest-label">Interest Slabs</div>
+                                        </div>
+
+                                    </div>-->
+
+
+
+
+
+
+
+
+                                    <template if:true={row.hasDemandRows}>
+                                        <table class="slds-table slds-table_bordered slds-table_cell-buffer"
+                                        style="width:100%; table-layout:auto; border-collapse:collapse;">
+                                            <thead>
+                                                <tr>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:160px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Milestone Name</div>
+                                                    </th>
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:140px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Invoice View</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:130px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>SAP Invoice Number</div>
+                                                    </th>
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:120px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Charge Code</div>
+                                                    </th>
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:140px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Billed &amp; Unbilled</div>
+                                                        <div>Milestone</div>
+
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:130px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Due Date</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:130px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Billing Amt Basic</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:120px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>TDS Applicable?</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:110px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>TDS @1%</div>
+
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:130px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Total Billed less</div>
+                                                        <div>TDS</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:140px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Partial Payment</div>
+                                                        <div>Amount</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:160px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Projected Date of</div>
+                                                        <div>Payment</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:110px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Days</div>
+
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:120px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Discount Applied</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:160px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Discount Calculated Value</div>
+                                                        <div>(For Information)</div>
+
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:130px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Action - Log a</div>
+                                                        <div>Case for TPR</div>
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:130px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Case Logged</div>
+                                                        <div>for TPR</div>
+                                                    </th>
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:160px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Final Case Approval-</div>
+                                                        <div>Discount Amt</div>
+
+                                                    </th>
+
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:120px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Net Recd Amt</div>
+
+                                                    </th>
+
+
+
+                                                    <!-- START : Demand Action Column -->
+                                                    <th
+                                                        style="background:#fff2cc; text-align:center; white-space:nowrap; min-width:140px; border:1px solid #c9b700; padding:6px 8px; font-weight:bold; font-size:12px;">
+                                                        <div>Action</div>
+                                                    </th>
+                                                    <!-- END : Demand Action Column -->
+
+                                                </tr>
+                                            </thead>
+
+                                            <!-- DATA ROWS -->
+                                            <tbody>
+                                                <template for:each={row.demandRows} for:item="demand">
+                                                    <tr key={demand.Id} style="background:#ffffff;">
+
+                                                        <td
+                                                            style="text-align:center; padding:6px 8px; border:1px solid #ddd;">
+                                                            <a data-id={demand.MilestoneId} onclick={openRecord}
+                                                                style="cursor:pointer; color:#0070d2;">
+                                                                {demand.MilestoneName}
+                                                            </a>
+                                                        </td>
+                                                        <td
+                                                            style="text-align:center; white-space:nowrap; padding:6px 8px; border:1px solid #ddd;">
+                                                            <template if:true={demand.DemandId}>
+                                                                <a data-id={demand.DemandId} onclick={handleOpenDemand}
+                                                                    style="cursor:pointer; color:#0070d2;">
+                                                                    {demand.DemandDisplayName}
+                                                                </a>
+                                                            </template>
+                                                            <template if:false={demand.DemandId}>
+                                                                {demand.DemandDisplayName}
+                                                            </template>
+                                                        </td>
+                                                        <td
+                                                            style="text-align:center; padding:6px 8px; border:1px solid #ddd;">
+                                                            {demand.DemandSAPCode}
+                                                        </td>
+
+                                                        <td
+                                                            style="text-align:center; padding:6px 8px; border:1px solid #ddd;">
+                                                            {demand.ChargeCode}
+                                                        </td>
+
+                                                        <!--<td
+                                                         style={demand.dropdownCellStyle}>
+                                                            <lightning-combobox variant="label-hidden"
+                                                                value={demand.BilledUnbilled} options={billedOptions}
+                                                                data-id={demand.Id} data-field="BilledUnbilled"
+                                                                onchange={handleDemandFieldChange}>
+                                                            </lightning-combobox>
+                                                        </td>-->
+
+                                                        <!--<td style="text-align:left; padding:4px; border:1px solid #ddd;">
+                                                        <div style={demand.dropdownWrapperStyle}>
+                                                            <lightning-combobox variant="label-hidden"
+                                                                value={demand.BilledUnbilled} options={billedOptions}
+                                                                data-id={demand.Id} data-field="BilledUnbilled"
+                                                                onchange={handleDemandFieldChange}>
+                                                            </lightning-combobox>
+                                                        </div>
+                                                    </td>-->
+
+                                                    <td style="text-align:left; padding:4px; border:1px solid #ddd; position:relative;">
+    <div class="slds-combobox_container">
+        <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click"
+             role="none">
+            <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                <button type="button"
+                    class="slds-input slds-combobox__input"
+                    data-id={demand.Id}
+                    onclick={toggleBilledDropdown}
+                    style="width:100%; text-align:left; background:#fff; cursor:pointer; box-sizing:border-box;">
+                    {demand.BilledUnbilledLabel}
+                </button>
+                <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                    <lightning-icon icon-name="utility:down" size="xx-small"
+                        class="slds-icon-text-default"></lightning-icon>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <template if:true={demand.showBilledDropdown}>
+        <ul style={demand.billedDropdownStyle}
+            class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid"
+            role="listbox">
+            <template for:each={demand.billedOptionsWithState} for:item="opt">
+                <li key={opt.value} role="presentation" class="slds-listbox__item">
+                    <div class={opt.optionClass}
+                        data-id={demand.Id}
+                        data-value={opt.value}
+                        data-label={opt.label}
+                        onclick={selectBilledOption}
+                        role="option">
+                        <span class="slds-media__figure slds-listbox__option-icon">
+                            <template if:true={opt.isSelected}>
+                                <lightning-icon icon-name="utility:check" size="x-small"></lightning-icon>
+                            </template>
+                        </span>
+                        <span class="slds-media__body">
+                            <span class="slds-truncate">{opt.label}</span>
+                        </span>
+                    </div>
+                </li>
+            </template>
+        </ul>
+    </template>
+</td>
+
+
+
+
+                                                        <td
+                                                            style="text-align:center; padding:6px 8px; border:1px solid #ddd;">
+                                                            <span style={demand.BillingDueDateStyle}>
+                                                                <lightning-formatted-date-time
+                                                                    value={demand.BillingDueDate}
+                                                                    year="numeric"
+                                                                    month="2-digit"
+                                                                    day="2-digit">
+                                                                </lightning-formatted-date-time>
+                                                            </span>
+                                                        </td>
+
+                                                        <td
+                                                            style="text-align:right; padding:6px 8px; border:1px solid #ddd;">
+                                                            {demand.BillingAmtBasic}
+                                                        </td>
+                                                        
+                                                        <!--<td
+                                                            style="text-align:left; overflow:visible; padding:4px; border:1px solid #ddd;">
+                                                            <lightning-combobox variant="label-hidden"
+                                                                value={demand.TDSApplicable} options={yesNoOptions}
+                                                                data-id={demand.Id} data-field="TDSApplicable"
+                                                                onchange={handleDemandFieldChange}>
+                                                            </lightning-combobox>
+                                                        </td>-->
+
+                                                        <!--<td style="text-align:left; padding:4px; border:1px solid #ddd;">
+                                                        <div style={demand.dropdownWrapperStyle}>
+                                                            <lightning-combobox variant="label-hidden"
+                                                                value={demand.TDSApplicable} options={yesNoOptions}
+                                                                data-id={demand.Id} data-field="TDSApplicable"
+                                                                onchange={handleDemandFieldChange}>
+                                                            </lightning-combobox>
+                                                        </div>
+                                                    </td>-->
+
+                                                    <td style="text-align:left; padding:4px; border:1px solid #ddd; position:relative;">
+    <div class="slds-combobox_container">
+        <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" role="none">
+            <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                <button type="button"
+                    class="slds-input slds-combobox__input"
+                    data-id={demand.Id}
+                    onclick={toggleTdsDropdown}
+                    style="width:100%; text-align:left; background:#fff; cursor:pointer; box-sizing:border-box;">
+                    {demand.TDSApplicableLabel}
+                </button>
+                <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                    <lightning-icon icon-name="utility:down" size="xx-small"
+                        class="slds-icon-text-default"></lightning-icon>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <template if:true={demand.showTdsDropdown}>
+        <ul style={demand.tdsDropdownStyle}
+            class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid"
+            role="listbox">
+            <template for:each={demand.tdsOptionsWithState} for:item="opt">
+                <li key={opt.value} role="presentation" class="slds-listbox__item">
+                    <div class={opt.optionClass}
+                        data-id={demand.Id}
+                        data-value={opt.value}
+                        data-label={opt.label}
+                        onclick={selectTdsOption}
+                        role="option">
+                        <span class="slds-media__figure slds-listbox__option-icon">
+                            <template if:true={opt.isSelected}>
+                                <lightning-icon icon-name="utility:check" size="x-small"></lightning-icon>
+                            </template>
+                        </span>
+                        <span class="slds-media__body">
+                            <span class="slds-truncate">{opt.label}</span>
+                        </span>
+                    </div>
+                </li>
+            </template>
+        </ul>
+    </template>
+</td>
+
+                                                        <td
+                                                            style="text-align:right; padding:6px 8px; border:1px solid #ddd;">
+                                                            {demand.TDS1Percent}
+                                                        </td>
+
+                                                        <td
+                                                            style="text-align:right; padding:6px 8px; border:1px solid #ddd;">
+                                                            {demand.TotalBilledLessTDS}
+                                                        </td>
+
+                                <td
+                                                        style="text-align:center; overflow:visible; padding:4px; border:1px solid #ddd; position:relative;">
+
+                                                        <div style="display:flex; align-items:center; gap:4px;">
+
+                                                            <lightning-input
+                                                                type="number"
+                                                                variant="label-hidden"
+                                                                value={demand.PartialPaymentAmount}
+                                                                placeholder="Enter Amount"
+                                                                min="0"
+                                                                data-id={demand.Id}
+                                                                data-field="PartialPaymentAmount"
+                                                                onchange={handleDemandFieldChange}
+                                                                message-when-range-underflow="Partial Payment Amount cannot be negative."
+                                                                style="flex:1;">
+                                                            </lightning-input>
+
+                                                            <div style="position:relative; display:inline-block;">
+
+                                                                <lightning-icon
+                                                                    icon-name="utility:info"
+                                                                    size="xx-small"
+                                                                    alternative-text="View history"
+                                                                    data-id={demand.Id}
+                                                                    onmouseover={handlePartialPaymentMouseOver}
+                                                                    onmouseout={handlePartialPaymentMouseOut}>
+                                                                </lightning-icon>
+
+                                                                <template if:true={demand.showPartialPaymentHistory}>
+                                                                    <div class="history-tooltip"
+                                                                     style={demand.partialPaymentTooltipStyle}>
+                                                                        <template if:false={demand.partialPaymentHistory.length}>
+                                                                            <div class="history-row" style="color:#888; font-style:italic;">
+                                                                                No history found
+                                                                            </div>
+                                                                        </template>
+
+                                                                        <template for:each={demand.partialPaymentHistory} for:item="hist">
+                                                                            <div key={hist.changedDate} class="history-row">
+                                                                                <div><strong>{hist.changedBy}</strong></div>
+                                                                                <div>{hist.oldValue} → {hist.newValue}</div>
+                                                                                <div class="history-date">{hist.formattedDate}</div>
+                                                                            </div>
+                                                                        </template>
+
+                                                                    </div>
+                                                                </template>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </td>
+                                                    
+
+
+
+
+
+
+
+                                                        <td style="text-align:center; padding:4px; border:1px solid #ddd;">
+    <div class="slds-form-element">
+        <div class="slds-form-element__control">
+            <input
+                type="date"
+                class="slds-input"
+                value={demand.ProjectedPaymentDate}
+                data-id={demand.Id}
+                data-field="ProjectedPaymentDate"
+                onchange={handleDemandFieldChange}
+                style="min-width:130px; font-size:12px;" />
+        </div>
+    </div>
+</td>
+
+                                                        <td
+                                                        style="text-align:center; padding:6px 8px; border:1px solid #ddd; font-weight:bold;">
+                                                        <span style={demand.earlierDaysStyle}>
+                                                            {demand.EarlierDays}
+                                                        </span>
+                                                        </td>
+                                                        <!--<td
+                                                            style="text-align:left; overflow:visible; padding:4px; border:1px solid #ddd;">
+                                                            <lightning-combobox variant="label-hidden"
+                                                                value={demand.DiscountApplied} options={yesNoOptions}
+                                                                data-id={demand.Id} data-field="DiscountApplied"
+                                                                onchange={handleDemandFieldChange}>
+                                                            </lightning-combobox>
+                                                        </td>-->
+
+                                                        <!--<td style="text-align:left; padding:4px; border:1px solid #ddd;">
+                                                        <div style={demand.dropdownWrapperStyle}>
+                                                            <lightning-combobox variant="label-hidden"
+                                                                value={demand.DiscountApplied} options={yesNoOptions}
+                                                                data-id={demand.Id} data-field="DiscountApplied"
+                                                                onchange={handleDemandFieldChange}>
+                                                            </lightning-combobox>
+                                                        </div>
+                                                    </td>-->
+
+                                                    <td style="text-align:left; padding:4px; border:1px solid #ddd; position:relative;">
+    <div class="slds-combobox_container">
+        <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click" role="none">
+            <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                <button type="button"
+                    class="slds-input slds-combobox__input"
+                    data-id={demand.Id}
+                    onclick={toggleDiscountDropdown}
+                    style="width:100%; text-align:left; background:#fff; cursor:pointer; box-sizing:border-box;">
+                    {demand.DiscountAppliedLabel}
+                </button>
+                <span class="slds-icon_container slds-input__icon slds-input__icon_right">
+                    <lightning-icon icon-name="utility:down" size="xx-small"
+                        class="slds-icon-text-default"></lightning-icon>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <template if:true={demand.showDiscountDropdown}>
+        <ul style={demand.discountDropdownStyle}
+            class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid"
+            role="listbox">
+            <template for:each={demand.discountOptionsWithState} for:item="opt">
+                <li key={opt.value} role="presentation" class="slds-listbox__item">
+                    <div class={opt.optionClass}
+                        data-id={demand.Id}
+                        data-value={opt.value}
+                        data-label={opt.label}
+                        onclick={selectDiscountOption}
+                        role="option">
+                        <span class="slds-media__figure slds-listbox__option-icon">
+                            <template if:true={opt.isSelected}>
+                                <lightning-icon icon-name="utility:check" size="x-small"></lightning-icon>
+                            </template>
+                        </span>
+                        <span class="slds-media__body">
+                            <span class="slds-truncate">{opt.label}</span>
+                        </span>
+                    </div>
+                </li>
+            </template>
+        </ul>
+    </template>
+</td>               
+
+
+
+                                                        <td
+                                                            style="text-align:right; padding:6px 8px; border:1px solid #ddd;">
+                                                            {demand.DiscountCalculatedValue}
+                                                        </td>
+
+                                                        <td
+                                                            style="text-align:center; padding:6px 8px; border:1px solid #ddd;">
+                                                            <lightning-button label="EPR To Post" variant="brand"
+                                                                size="small" data-id={demand.DemandId}
+                                                                data-booking-id={row.Id}
+                                                                disabled={demand.logCaseDisabled}
+                                                                onclick={handleLogCase}>
+                                                            </lightning-button>
+
+                                                            <template if:true={demand.logCaseDisabled}>
+                                                                <div
+                                                                    style="font-size:10px; color:#888; margin-top:3px;">
+                                                                    {demand.logCaseDisabledReason}
+                                                                </div>
+                                                            </template>
+                                                        </td>
+
+                                                        <td 
+                                                        style="text-align:center; padding:6px 8px; border:1px solid #ddd; position:relative;">
+    <template if:true={demand.CaseNumber}>
+        <a
+            data-id={demand.CaseId}
+            data-approval-id={demand.Id}
+            onclick={openRecord}
+            onmouseover={handleCaseApprovalMouseOver}
+            onmouseout={handleCaseApprovalMouseOut}
+            style="color:#0176d3; font-weight:600; cursor:pointer; text-decoration:underline;">
+            {demand.CaseNumber}
+        </a>
+
+       <template if:true={demand.showApprovalTooltip}>
+    <div style={demand.approvalTooltipStyle}>
+        <div class="history-row">
+            <div><strong>Approval Status:</strong></div>
+            <div>{demand.approvalStatusDisplay}</div>
+        </div>
+    </div>
+</template>
+    </template>
+</td>
+
+                                                        <td style="text-align:center;">
+                                                            {demand.FinalCaseApprovalAmount}
+                                                        </td>
+
+                                                        <td style="text-align:center;">
+                                                            {demand.NetReceivedAmount}
+                                                        </td>
+
+                                                        <!--<td
+                                                            style="text-align:center; overflow:visible; padding:4px; border:1px solid #ddd;">
+                                                            <lightning-input type="number" variant="label-hidden"
+                                                                value={demand.PartialPaymentAmount}
+                                                                placeholder="Enter Amount" data-id={demand.Id}
+                                                                data-field="PartialPaymentAmount"
+                                                                onchange={handleDemandFieldChange}>
+                                                            </lightning-input>
+                                                        </td>-->
+
+                                                    <!-- added for field history tracking-->
+                                                    
+
+                                                        <!-- START : Demand Action Dropdown -->
+                                                        <td
+                                                            style="text-align:center; overflow:visible; padding:4px; border:1px solid #ddd;">
+                                                            <lightning-button-menu
+                                                                icon-name="utility:down"
+                                                                variant="bare"
+                                                                alternative-text="Demand Action"
+                                                                menu-alignment="right"
+                                                               data-id={demand.Id}
+                                                               data-demandid={demand.DemandId}
+                                                                onselect={handleDemandActionMenuSelect}>
+
+                                                                <!--<lightning-menu-item
+                                                                    value="Send Demand"
+                                                                    label="Send Demand (WA/Email)">
+                                                                </lightning-menu-item>-->
+
+
+                                                                <!--<lightning-menu-item
+                                                                value="Send Demand1"
+                                                                label="Send Demand">
+                                                            </lightning-menu-item>-->
+                                                            <!-- END -->
+
+                                                                 <!-- START : Send Email Option -->
+                                                            <lightning-menu-item
+                                                                value="Send Email"
+                                                                label="Send Email">
+                                                            </lightning-menu-item>
+                                                            <!-- END -->
+
+                                                             <lightning-menu-item
+                                                                value="Send WA reminder"
+                                                                label="Send WA reminder">
+                                                            </lightning-menu-item>
+                                                            <!-- END -->
+
+                                                            </lightning-button-menu>
+
+                                                           
+
+                                                        </td>
+                                                        <!-- END : Demand Action Dropdown -->
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </template>
+
+
+                                    <template if:false={row.hasDemandRows}>
+                                        <div class="slds-text-align_center slds-p-vertical_small slds-text-color_weak">
+                                            No pending demands found for this booking.
+                                        </div>
+                                    </template>
+
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <!-- -->
+
+                </template>
+
+                <template if:false={hasRecords}>
+                    <tr>
+                        <td colspan="23" class="slds-text-align_center slds-p-vertical_large">
+                            <span class="slds-text-heading_small slds-text-color_strong">
+                                No records found
+                            </span>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+    <div class="slds-m-top_medium slds-m-bottom_medium slds-text-align_right"
+        style="padding: 12px 16px; background:#f3f3f3; border-top: 1px solid #dddbda;">
+        <lightning-button label="Save" variant="brand" onclick={handleSave} disabled={isSaving}>
+        </lightning-button>
+        <template if:true={isSaving}>
+            <span class="slds-m-left_small slds-text-color_weak">Saving...</span>
+        </template>
+    </div>
+
+    <template if:true={showDateModal}>
+        <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_small">
+
+            <div class="slds-modal__container" style="max-width:320px; width:320px;">
+
+                <header class="slds-modal__header">
+
+                    <lightning-button-icon icon-name="utility:close" alternative-text="Close" onclick={closeDateModal}
+                        class="slds-modal__close">
+                    </lightning-button-icon>
+
+                    <h2 class="slds-text-heading_small">
+                        Select PTP Date
+                    </h2>
+
+                </header>
+
+                <div class="slds-modal__content slds-p-around_medium">
+
+                    <lightning-input type="date"
+                     label="PTP Date"
+                      value={modalDateValue}
+                        onchange={handleModalDateChange}>
+                    </lightning-input>
+
+                </div>
+
+                <footer class="slds-modal__footer">
+
+                    <lightning-button label="Cancel" onclick={closeDateModal}>
+                    </lightning-button>
+
+                    <lightning-button label="Confirm" variant="brand" onclick={confirmDateModal}>
+                    </lightning-button>
+
+                </footer>
+
+            </div>
+
+        </section>
+
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <template if:true={showProjectedDateModal}>
+
+        <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_small">
+
+            <div class="slds-modal__container" style="max-width:320px; width:320px;">
+
+                <header class="slds-modal__header">
+
+                    <lightning-button-icon icon-name="utility:close" alternative-text="Close"
+                        onclick={closeProjectedDateModal} class="slds-modal__close">
+                    </lightning-button-icon>
+
+                    <h2 class="slds-text-heading_small">
+                        Select Projected Payment Date
+                    </h2>
+
+                </header>
+
+                <div class="slds-modal__content slds-p-around_medium">
+
+                    <lightning-input type="date" label="Projected Date" value={projectedDateValue}
+                        onchange={handleProjectedModalDateChange}>
+                    </lightning-input>
+
+                </div>
+
+                <footer class="slds-modal__footer">
+
+                    <lightning-button label="Cancel" onclick={closeProjectedDateModal}>
+                    </lightning-button>
+
+                    <lightning-button label="Confirm" variant="brand" onclick={confirmProjectedDateModal}>
+                    </lightning-button>
+
+                </footer>
+
+            </div>
+
+        </section>
+
+        <div class="slds-backdrop slds-backdrop_open"></div>
+
+    </template>
+</template>
